@@ -3128,6 +3128,37 @@ function setupInteractions() {
     }
     dom.playerQualityMenu.addEventListener("click", handlePlayerQualitySelection);
 
+    if (dom.lyricsContent) {
+        dom.lyricsContent.addEventListener("click", (event) => {
+            const target = event.target instanceof HTMLElement
+                ? event.target.closest("div[data-index][data-time]")
+                : null;
+            if (!target) {
+                return;
+            }
+
+            const time = Number.parseFloat(target.dataset.time || "");
+            const index = Number.parseInt(target.dataset.index || "", 10);
+            seekToLyricLine(time, index, target);
+        });
+
+        dom.lyricsContent.addEventListener("keydown", (event) => {
+            const target = event.target instanceof HTMLElement
+                ? event.target.closest("div[data-index][data-time]")
+                : null;
+            if (!target) {
+                return;
+            }
+
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                const time = Number.parseFloat(target.dataset.time || "");
+                const index = Number.parseInt(target.dataset.index || "", 10);
+                seekToLyricLine(time, index, target);
+            }
+        });
+    }
+
     if (isMobileView && dom.albumCover) {
         dom.albumCover.addEventListener("click", () => {
             toggleMobileInlineLyrics();
@@ -5794,9 +5825,54 @@ function displayLyrics() {
     if (dom.lyrics) {
         dom.lyrics.dataset.placeholder = "default";
     }
+    bindDesktopLyricSeek();
     if (state.isMobileInlineLyricsOpen) {
         syncLyrics();
     }
+}
+
+function seekToLyricLine(time, index, element) {
+    if (!dom.audioPlayer || !Number.isFinite(time) || time < 0) {
+        return;
+    }
+
+    state.userScrolledLyrics = false;
+    if (state.lyricsScrollTimeout) {
+        clearTimeout(state.lyricsScrollTimeout);
+        state.lyricsScrollTimeout = null;
+    }
+
+    state.currentLyricLine = Number.isInteger(index) ? index : state.currentLyricLine;
+    state.pendingSeekTime = null;
+    setAudioCurrentTime(time);
+    syncLyrics();
+
+    if (element) {
+        scrollToCurrentLyric(element, dom.lyricsScroll || dom.lyrics);
+    }
+
+    const playPromise = dom.audioPlayer.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch((error) => {
+            console.error("歌词跳转后继续播放失败:", error);
+            showNotification("已跳转到对应歌词位置", "warning");
+        });
+    }
+}
+
+function bindDesktopLyricSeek() {
+    if (!dom.lyricsContent) {
+        return;
+    }
+
+    const lyricItems = dom.lyricsContent.querySelectorAll("div[data-index][data-time]");
+    lyricItems.forEach((item) => {
+        item.classList.add("lyric-line--seekable");
+        item.setAttribute("role", "button");
+        item.setAttribute("tabindex", "0");
+        item.setAttribute("title", "点击跳转到该句歌词");
+        item.setAttribute("aria-label", `跳转到歌词：${item.textContent?.trim() || "当前歌词"}`);
+    });
 }
 
 // 修复：同步歌词
