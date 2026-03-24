@@ -5842,13 +5842,13 @@ function seekToLyricLine(time, index, element) {
         state.lyricsScrollTimeout = null;
     }
 
-    state.currentLyricLine = Number.isInteger(index) ? index : state.currentLyricLine;
+    state.currentLyricLine = -1;
     state.pendingSeekTime = null;
     setAudioCurrentTime(time);
     syncLyrics();
 
     if (element) {
-        scrollToCurrentLyric(element, dom.lyricsScroll || dom.lyrics);
+        scrollToCurrentLyric(element, dom.lyricsScroll || dom.lyrics, { immediate: true });
     }
 
     const playPromise = dom.audioPlayer.play();
@@ -5925,7 +5925,8 @@ function syncLyrics() {
 }
 
 // 新增：滚动到当前歌词 - 修复居中显示问题
-function scrollToCurrentLyric(element, containerOverride) {
+function scrollToCurrentLyric(element, containerOverride, options = {}) {
+    const { immediate = false } = options;
     const container = containerOverride || dom.lyricsScroll || dom.lyrics;
     if (!container || !element) {
         return;
@@ -5945,7 +5946,9 @@ function scrollToCurrentLyric(element, containerOverride) {
     const finalScrollTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
 
     if (Math.abs(container.scrollTop - finalScrollTop) > 1) {
-        if (typeof container.scrollTo === "function") {
+        if (immediate) {
+            container.scrollTop = finalScrollTop;
+        } else if (typeof container.scrollTo === "function") {
             container.scrollTo({
                 top: finalScrollTop,
                 behavior: 'smooth'
