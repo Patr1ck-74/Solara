@@ -3362,14 +3362,26 @@ function setupInteractions() {
         }
     });
 
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && state.sourceMenuOpen) {
-            closeSourceMenu();
-        }
-        if (isMobileView && e.key === "Escape") {
-            closeAllMobileOverlays();
-        }
-    });
+	document.addEventListener("keydown", (e) => {
+		const target = e.target;
+		const isEditable = target instanceof HTMLElement && (
+			target.tagName === "INPUT" ||
+			target.tagName === "TEXTAREA" ||
+			target.tagName === "SELECT" ||
+			target.isContentEditable
+		);
+
+		if (e.key === "Escape" && state.sourceMenuOpen) {
+			closeSourceMenu();
+		}
+		if (isMobileView && e.key === "Escape") {
+			closeAllMobileOverlays();
+		}
+		if ((e.key === " " || e.code === "Space") && !isEditable) {
+			e.preventDefault();
+			togglePlayPause();
+		}
+	});
 
     // 搜索结果相关事件处理 - 修复加载更多按钮点击问题
     document.addEventListener("click", (e) => {
